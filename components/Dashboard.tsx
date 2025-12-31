@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { ThemeVibe, AppView } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ThemeVibe, AppView, Task, HistoryEvent } from '../types';
 import Sidebar from './Sidebar';
 import Timer from './Timer';
 import TaskList from './TaskList';
@@ -13,10 +13,71 @@ interface DashboardProps {
   currentTheme: ThemeVibe;
   onThemeChange: (theme: ThemeVibe) => void;
   onNavigate: (view: AppView) => void;
+  onLogout: () => void;
+  addHistoryEvent: (event: Omit<HistoryEvent, 'id' | 'timestamp'>) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ currentTheme, onThemeChange, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ currentTheme, onThemeChange, onNavigate, onLogout, addHistoryEvent }) => {
   const [activeRightPanel, setActiveRightPanel] = useState<'tasks' | 'translator'>('tasks');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskInputValue, setTaskInputValue] = useState('');
+
+  // Cargar tareas al iniciar
+  useEffect(() => {
+    const saved = localStorage.getItem('vizo-tasks');
+    if (saved) {
+      try {
+        setTasks(JSON.parse(saved));
+      } catch (e) {
+        setTasks([]);
+      }
+    } else {
+      setTasks([
+        { id: '1', text: 'Optimizar Core Web Vitals', completed: true },
+        { id: '2', text: 'Revisar integración Gemini API', completed: false, dueDate: '14:00' },
+      ]);
+    }
+  }, []);
+
+  // Guardar tareas cuando cambien
+  useEffect(() => {
+    localStorage.setItem('vizo-tasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  const addTask = (text: string) => {
+    if (!text.trim()) return;
+    const newTask: Task = {
+      id: Math.random().toString(36).substr(2, 9),
+      text: text,
+      completed: false
+    };
+    setTasks(prevTasks => [newTask, ...prevTasks]);
+    addHistoryEvent({ type: 'task', title: 'Tarea Creada', description: text });
+  };
+
+  const handleTaskFormSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    addTask(taskInputValue);
+    setTaskInputValue('');
+  };
+
+  const toggleTask = (id: string) => {
+    setTasks(tasks.map(t => {
+      if (t.id === id) {
+        if (!t.completed) {
+          addHistoryEvent({ type: 'task', title: 'Tarea Completada', description: t.text });
+        }
+        return { ...t, completed: !t.completed };
+      }
+      return t;
+    }));
+  };
+
+  const removeTask = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTasks(tasks.filter(t => t.id !== id));
+  };
+
 
   const getBgStyle = () => {
     switch (currentTheme) {
@@ -53,6 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentTheme, onThemeChange, onNa
         onNavigate={onNavigate}
         currentView={AppView.DASHBOARD}
         onToggleTranslator={() => setActiveRightPanel(prev => prev === 'translator' ? 'tasks' : 'translator')}
+        onLogout={onLogout}
       />
 
       <main className="flex-1 flex flex-col relative z-10">
@@ -82,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentTheme, onThemeChange, onNa
         </header>
 
         <div className="flex-1 flex items-center justify-center -mt-20">
-           <Timer currentTheme={currentTheme} />
+           <Timer currentTheme={currentTheme} onAddTask={addTask} addHistoryEvent={addHistoryEvent} />
         </div>
 
         <div className="p-10 flex items-end justify-between gap-10">
@@ -99,21 +161,28 @@ const Dashboard: React.FC<DashboardProps> = ({ currentTheme, onThemeChange, onNa
          <div className="flex gap-2 p-1.5 bg-black/40 rounded-2xl mb-2">
             <button 
               onClick={() => setActiveRightPanel('tasks')}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeRightPanel === 'tasks' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-            >
+              className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeRightPanel === 'tasks' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>
               Tareas
             </button>
             <button 
               onClick={() => setActiveRightPanel('translator')}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeRightPanel === 'translator' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-            >
+              className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${activeRightPanel === 'translator' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>
               Traductor
             </button>
          </div>
          
          <div className="flex-1 overflow-hidden space-y-6">
             <div className="h-[60%] overflow-hidden">
-               {activeRightPanel === 'tasks' ? <TaskList /> : <TranslatorPanel onClose={() => setActiveRightPanel('tasks')} />}
+               {activeRightPanel === 'tasks' ? (
+                  <TaskList 
+                    tasks={tasks}
+                    inputValue={taskInputValue}
+                    onInputChange={setTaskInputValue}
+                    onTaskSubmit={handleTaskFormSubmit}
+                    onToggleTask={toggleTask}
+                    onRemoveTask={removeTask}
+                  />
+                ) : <TranslatorPanel onClose={() => setActiveRightPanel('tasks')} />}
             </div>
             <div className="h-[40%]">
                <BreakBrainstorm />

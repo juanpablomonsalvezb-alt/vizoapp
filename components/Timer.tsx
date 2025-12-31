@@ -1,18 +1,21 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ThemeVibe } from '../types';
+import { ThemeVibe, HistoryEvent } from '../types';
 
 interface TimerProps {
   currentTheme: ThemeVibe;
+  onAddTask: (taskText: string) => void;
+  addHistoryEvent: (event: Omit<HistoryEvent, 'id' | 'timestamp'>) => void;
 }
 
-const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
+const Timer: React.FC<TimerProps> = ({ currentTheme, onAddTask, addHistoryEvent }) => {
   const FOCUS_TIME = 1500; // 25 min
   const BREAK_TIME = 300;  // 5 min
   
   const [seconds, setSeconds] = useState(FOCUS_TIME);
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState<'focus' | 'break'>('focus');
+  const [currentTask, setCurrentTask] = useState('');
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -23,7 +26,19 @@ const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
     } else if (seconds === 0) {
       if (timerRef.current) clearInterval(timerRef.current);
       setIsActive(false);
-      // Play a notification sound could go here
+
+      const sessionLength = mode === 'focus' ? FOCUS_TIME : BREAK_TIME;
+      addHistoryEvent({
+        type: 'session',
+        title: mode === 'focus' ? 'Sesión de Enfoque Completada' : 'Descanso Completado',
+        description: `${sessionLength / 60} minutos`,
+      });
+
+      if (mode === 'focus' && currentTask.trim() !== '') {
+        onAddTask(currentTask);
+        setCurrentTask('');
+      }
+
       const nextMode = mode === 'focus' ? 'break' : 'focus';
       setMode(nextMode);
       setSeconds(nextMode === 'focus' ? FOCUS_TIME : BREAK_TIME);
@@ -31,7 +46,7 @@ const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, seconds, mode]);
+  }, [isActive, seconds, mode, currentTask, onAddTask, addHistoryEvent]);
 
   const toggleTimer = () => setIsActive(!isActive);
 
@@ -47,6 +62,18 @@ const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
     setSeconds(nextMode === 'focus' ? FOCUS_TIME : BREAK_TIME);
   };
 
+  const handleTaskInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentTask(e.target.value);
+  };
+
+  const handleTaskSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentTask.trim() !== '') {
+      onAddTask(currentTask);
+      setCurrentTask('');
+    }
+  };
+
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
@@ -55,7 +82,6 @@ const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
 
   const totalModeSeconds = mode === 'focus' ? FOCUS_TIME : BREAK_TIME;
   const progress = (seconds / totalModeSeconds) * 100;
-  // Perímetro del círculo es 2 * PI * radio. r=45% de 450px aprox. Usamos valor fijo 1256 para el dasharray.
   const strokeDashoffset = 1256 - (1256 * progress) / 100;
 
   const getThemeColor = () => {
@@ -72,13 +98,11 @@ const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
   return (
     <div className="flex flex-col items-center justify-center animate-fade-in">
       <div className="relative w-80 h-80 md:w-[450px] md:h-[450px] flex items-center justify-center">
-        {/* Glow dinámico */}
         <div 
           className="absolute inset-0 blur-[120px] opacity-20 rounded-full transition-colors duration-1000"
           style={{ backgroundColor: themeColor }}
         ></div>
         
-        {/* Anillo de Progreso */}
         <svg className="absolute inset-0 w-full h-full -rotate-90">
           <circle 
             cx="50%" cy="50%" r="44%" 
@@ -119,7 +143,6 @@ const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
           </div>
         </div>
 
-        {/* Controles */}
         <div className="absolute -bottom-6 flex items-center gap-6 glass-panel px-8 py-4 rounded-3xl shadow-2xl border border-white/10">
           <button 
             onClick={resetTimer}
@@ -148,14 +171,16 @@ const Timer: React.FC<TimerProps> = ({ currentTheme }) => {
         </div>
       </div>
 
-      <div className="mt-24 w-80 md:w-[480px] glass-panel rounded-2xl p-4 flex items-center gap-4 border border-white/10 focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+      <form onSubmit={handleTaskSubmit} className="mt-24 w-80 md:w-[480px] glass-panel rounded-2xl p-4 flex items-center gap-4 border border-white/10 focus-within:ring-2 focus-within:ring-primary/40 transition-all">
         <span className="material-symbols-outlined text-gray-500">edit_square</span>
         <input 
           type="text" 
+          value={currentTask}
+          onChange={handleTaskInputChange}
           placeholder="¿En qué estás trabajando ahora?" 
           className="bg-transparent border-none focus:ring-0 w-full text-white placeholder-gray-600 text-sm font-bold"
         />
-      </div>
+      </form>
     </div>
   );
 };

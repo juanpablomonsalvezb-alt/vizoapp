@@ -1,18 +1,50 @@
 
 import React from 'react';
-import { AppView } from '../types';
+import { AppView, HistoryEvent } from '../types';
 
 interface HistoryProps {
   onNavigate: (view: AppView) => void;
+  events: HistoryEvent[];
 }
 
-const History: React.FC<HistoryProps> = ({ onNavigate }) => {
-  const events = [
-    { type: 'session', title: 'Bloque de Enfoque', desc: 'Desarrollo Frontend (45 min)', time: '12:30', date: 'Hoy' },
-    { type: 'task', title: 'Tarea Finalizada', desc: 'Corrección de bugs en Dashboard', time: '11:15', date: 'Hoy' },
-    { type: 'settings', title: 'Tema Actualizado', desc: 'Cambiado a Juvenil', time: '09:00', date: 'Hoy' },
-    { type: 'session', title: 'Descanso Corto', desc: 'Meditación Guiada (5 min)', time: '16:45', date: 'Ayer' },
-  ];
+// Función para agrupar eventos por fecha
+const groupEventsByDate = (events: HistoryEvent[]) => {
+  const grouped: { [key: string]: HistoryEvent[] } = {};
+
+  events.forEach(event => {
+    const eventDate = new Date(event.timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let dayKey: string;
+
+    if (eventDate.toDateString() === today.toDateString()) {
+      dayKey = 'Hoy';
+    } else if (eventDate.toDateString() === yesterday.toDateString()) {
+      dayKey = 'Ayer';
+    } else {
+      dayKey = eventDate.toLocaleDateString('es-ES', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+
+    if (!grouped[dayKey]) {
+      grouped[dayKey] = [];
+    }
+    grouped[dayKey].push(event);
+  });
+
+  return grouped;
+};
+
+
+const History: React.FC<HistoryProps> = ({ onNavigate, events }) => {
+
+  const groupedEvents = groupEventsByDate(events);
 
   return (
     <div className="h-full w-full bg-[#111418] overflow-y-auto p-10 lg:p-20 animate-fade-in">
@@ -36,40 +68,36 @@ const History: React.FC<HistoryProps> = ({ onNavigate }) => {
         </header>
 
         <div className="space-y-12">
-           <section>
+          {Object.entries(groupedEvents).map(([date, dateEvents]) => (
+            <section key={date}>
               <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-4">
-                 <h2 className="text-2xl font-black">Hoy</h2>
-                 <span className="text-gray-600 font-bold uppercase text-[10px] tracking-widest">24 DE OCTUBRE</span>
+                <h2 className="text-2xl font-black capitalize">{date}</h2>
               </div>
               <div className="space-y-2">
-                {events.filter(e => e.date === 'Hoy').map((ev, i) => (
-                  <HistoryItem key={i} {...ev} />
+                {dateEvents.map((ev) => (
+                  <HistoryItem key={ev.id} {...ev} />
                 ))}
               </div>
-           </section>
+            </section>
+          ))}
 
-           <section>
-              <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-4">
-                 <h2 className="text-2xl font-black opacity-50">Ayer</h2>
-                 <span className="text-gray-600 font-bold uppercase text-[10px] tracking-widest">23 DE OCTUBRE</span>
-              </div>
-              <div className="space-y-2">
-                {events.filter(e => e.date === 'Ayer').map((ev, i) => (
-                  <HistoryItem key={i} {...ev} />
-                ))}
-              </div>
-           </section>
+          {events.length === 0 && (
+            <div className="text-center py-20">
+              <p className="text-gray-500">No hay eventos todavía. ¡Completa una tarea o una sesión de enfoque para empezar!</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-const HistoryItem = ({ type, title, desc, time }: any) => {
+const HistoryItem = ({ type, title, description, timestamp }: HistoryEvent) => {
   const getIcon = () => {
     switch(type) {
       case 'task': return 'check_circle';
       case 'session': return 'timer';
+      case 'theme': return 'palette';
       default: return 'settings_suggest';
     }
   };
@@ -78,10 +106,13 @@ const HistoryItem = ({ type, title, desc, time }: any) => {
     switch(type) {
       case 'task': return 'text-emerald-400';
       case 'session': return 'text-primary';
-      default: return 'text-fuchsia-400';
+      case 'theme': return 'text-fuchsia-400';
+      default: return 'text-gray-500';
     }
   };
   
+  const time = new Date(timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
   return (
     <div className="group flex items-center gap-6 p-6 rounded-[2rem] hover:bg-white/5 transition-all border border-transparent hover:border-white/10 cursor-default animate-fade-in">
        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center bg-white/5 border border-white/5 ${getColor()} group-hover:scale-110 transition-all`}>
@@ -92,7 +123,7 @@ const HistoryItem = ({ type, title, desc, time }: any) => {
              <h4 className="font-black text-gray-200 uppercase text-xs tracking-widest">{title}</h4>
              <span className="text-[10px] font-bold text-gray-600">{time}</span>
           </div>
-          <p className="text-sm text-gray-500 font-medium">{desc}</p>
+          <p className="text-sm text-gray-500 font-medium">{description}</p>
        </div>
        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
           <button className="p-3 text-gray-600 hover:text-white">

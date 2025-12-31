@@ -1,52 +1,28 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Task } from '../types';
 
-const TaskList: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [inputValue, setInputValue] = useState('');
+interface TaskListProps {
+  tasks: Task[];
+  inputValue: string;
+  onInputChange: (value: string) => void;
+  onTaskSubmit: (e?: React.FormEvent) => void;
+  onToggleTask: (id: string) => void;
+  onRemoveTask: (id: string, e: React.MouseEvent) => void;
+}
 
-  // Cargar tareas al iniciar
-  useEffect(() => {
-    const saved = localStorage.getItem('vizo-tasks');
-    if (saved) {
-      try {
-        setTasks(JSON.parse(saved));
-      } catch (e) {
-        setTasks([]);
-      }
-    } else {
-      setTasks([
-        { id: '1', text: 'Optimizar Core Web Vitals', completed: true },
-        { id: '2', text: 'Revisar integración Gemini API', completed: false, dueDate: '14:00' },
-      ]);
-    }
-  }, []);
+const TaskList: React.FC<TaskListProps> = ({ 
+  tasks, 
+  inputValue, 
+  onInputChange, 
+  onTaskSubmit, 
+  onToggleTask, 
+  onRemoveTask 
+}) => {
 
-  // Guardar tareas cuando cambien
-  useEffect(() => {
-    localStorage.setItem('vizo-tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const addTask = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!inputValue.trim()) return;
-    const newTask: Task = {
-      id: Math.random().toString(36).substr(2, 9),
-      text: inputValue,
-      completed: false
-    };
-    setTasks([newTask, ...tasks]);
-    setInputValue('');
-  };
-
-  const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const removeTask = (id: string, e: React.MouseEvent) => {
+  const handleRemoveClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setTasks(tasks.filter(t => t.id !== id));
+    onRemoveTask(id, e);
   };
 
   return (
@@ -69,7 +45,7 @@ const TaskList: React.FC = () => {
         {tasks.map(task => (
           <div 
             key={task.id}
-            onClick={() => toggleTask(task.id)}
+            onClick={() => onToggleTask(task.id)}
             className="group flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 cursor-pointer transition-all border border-transparent hover:border-white/5 animate-fade-in"
           >
             <div className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center flex-shrink-0 ${
@@ -86,7 +62,7 @@ const TaskList: React.FC = () => {
               )}
             </div>
             <button 
-              onClick={(e) => removeTask(task.id, e)}
+              onClick={(e) => handleRemoveClick(task.id, e)}
               className="opacity-0 group-hover:opacity-100 p-2 text-gray-600 hover:text-red-400 transition-all"
             >
               <span className="material-symbols-outlined text-lg">delete</span>
@@ -102,11 +78,11 @@ const TaskList: React.FC = () => {
       </div>
 
       <div className="p-4 bg-black/30 border-t border-white/5">
-        <form onSubmit={addTask} className="relative">
+        <form onSubmit={onTaskSubmit} className="relative">
            <input 
              type="text" 
              value={inputValue}
-             onChange={(e) => setInputValue(e.target.value)}
+             onChange={(e) => onInputChange(e.target.value)}
              placeholder="Añadir nueva meta..."
              className="w-full bg-white/5 border border-white/5 rounded-2xl py-4 pl-4 pr-14 text-sm text-white placeholder-gray-600 focus:ring-1 focus:ring-primary outline-none transition-all"
            />

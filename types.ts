@@ -29,3 +29,11 @@ export interface Stats {
   totalEvents: number;
   streakDays: number;
 }
+
+export type HistoryEvent = {
+  id: string;
+  type: 'session' | 'task' | 'theme';
+  title: string;
+  description: string;
+  timestamp: number;
+};

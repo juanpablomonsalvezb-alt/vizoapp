@@ -6,19 +6,58 @@ interface MusicPlayerProps {
   currentTheme: ThemeVibe;
 }
 
+const themeConfig = {
+  [ThemeVibe.PROFESSIONAL]: {
+    stream: "https://assets.mixkit.co/music/preview/mixkit-a-very-happy-christmas-897.mp3",
+    cover: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=200",
+    title: "Productive Morning",
+    artist: "Corporate Focus Mix"
+  },
+  [ThemeVibe.LOFI]: {
+    stream: "https://hyades.shoutca.st/11410/stream",
+    cover: "https://images.unsplash.com/photo-1514525253344-7814d9994a80?auto=format&fit=crop&q=80&w=200",
+    title: "Vizo Ambient Radio",
+    artist: "Lo-Fi & Deep Focus Beats"
+  },
+  [ThemeVibe.KPOP]: {
+    stream: "https://kpopway.radioca.st/stream",
+    cover: "https://images.unsplash.com/photo-1511306399243-67a6a79316a0?auto=format&fit=crop&q=80&w=200",
+    title: "K-Pop Hits Radio",
+    artist: "24/7 K-Pop Music"
+  },
+  [ThemeVibe.JUVENILE]: {
+    stream: "https://assets.mixkit.co/music/preview/mixkit-hollidays-690.mp3",
+    cover: "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&q=80&w=200",
+    title: "Upbeat & Fun",
+    artist: "Feel Good Playlist"
+  }
+};
+
 const MusicPlayer: React.FC<MusicPlayerProps> = ({ currentTheme }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // Stream de radio real para que la app sea funcional
-  const LOFI_STREAM = "https://hyades.shoutca.st/11410/stream";
+  const currentTrack = themeConfig[currentTheme] || themeConfig[ThemeVibe.PROFESSIONAL];
 
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+        const wasPlaying = isPlaying;
+        setIsPlaying(false);
+        audioRef.current.src = currentTrack.stream;
+        audioRef.current.load();
+        if (wasPlaying) {
+            audioRef.current.play().catch(console.error);
+            setIsPlaying(true);
+        }
+    }
+  }, [currentTheme]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -32,11 +71,11 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ currentTheme }) => {
 
   return (
     <div className="glass-panel p-4 rounded-[2.5rem] flex items-center gap-6 border border-white/10 shadow-2xl animate-fade-in">
-      <audio ref={audioRef} src={LOFI_STREAM} crossOrigin="anonymous" />
+      <audio ref={audioRef} src={currentTrack.stream} crossOrigin="anonymous" onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />
       
       <div className="relative w-16 h-16 rounded-[1.25rem] overflow-hidden shadow-2xl flex-shrink-0 group">
         <img 
-          src="https://images.unsplash.com/photo-1514525253344-7814d9994a80?auto=format&fit=crop&q=80&w=200" 
+          src={currentTrack.cover} 
           className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[10s] linear ${isPlaying ? 'scale-150 rotate-12' : 'scale-100'}`} 
         />
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -55,9 +94,9 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ currentTheme }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
            <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-sm">LIVE</span>
-           <h4 className="text-xs font-black uppercase tracking-widest text-white truncate">Vizo Ambient Radio</h4>
+           <h4 className="text-xs font-black uppercase tracking-widest text-white truncate">{currentTrack.title}</h4>
         </div>
-        <p className="text-[10px] font-bold text-gray-500 truncate uppercase">Lo-Fi & Deep Focus Beats</p>
+        <p className="text-[10px] font-bold text-gray-500 truncate uppercase">{currentTrack.artist}</p>
       </div>
 
       <div className="flex items-center gap-4 pr-2">

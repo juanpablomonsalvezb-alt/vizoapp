@@ -8,14 +8,10 @@ interface SidebarProps {
   onNavigate: (view: AppView) => void;
   onToggleTranslator: () => void;
   currentView: AppView;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentTheme, onThemeChange, onNavigate, onToggleTranslator, currentView }) => {
-  
-  const handleLogout = () => {
-    localStorage.setItem('vizo-auth', 'false');
-    window.location.reload(); // Forma sencilla de resetear el estado global
-  };
+const Sidebar: React.FC<SidebarProps> = ({ currentTheme, onThemeChange, onNavigate, onToggleTranslator, currentView, onLogout }) => {
 
   return (
     <aside className="w-72 h-full glass-panel border-r border-white/5 flex flex-col p-6 z-30">
@@ -99,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTheme, onThemeChange, onNaviga
         </div>
         
         <button 
-          onClick={handleLogout}
+          onClick={onLogout}
           className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-gray-500 hover:text-red-400 hover:bg-red-500/5 transition-all font-bold text-xs uppercase tracking-widest"
         >
           <span className="material-symbols-outlined text-xl">logout</span>
