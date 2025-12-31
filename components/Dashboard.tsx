@@ -101,11 +101,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentTheme, onThemeChange, onNa
         <video 
           key={currentTheme}
           autoPlay loop muted playsInline 
-          className="w-full h-full object-cover opacity-20 mix-blend-screen scale-110"
+          className="w-full h-full object-cover opacity-50 mix-blend-screen scale-110"
         >
           <source src={getOverlayVideo()} type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-background-dark/40 backdrop-blur-[2px]"></div>
+        <div className="absolute inset-0 bg-background-dark/40"></div>
       </div>
 
       <Sidebar 
